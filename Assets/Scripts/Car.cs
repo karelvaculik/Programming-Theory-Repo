@@ -1,14 +1,33 @@
 using UnityEngine;
 
-public class Car : MonoBehaviour
+public abstract class Car : MonoBehaviour
 {
-    [SerializeField] private float speed = 5f;
+    private const float MaxSpeed = 10f;
+
+    [SerializeField, Range(-MaxSpeed, MaxSpeed)]
+    private float speed = 5f;
+
     [SerializeField] private float radius;
 
     // Parameters computed at runtime to eliminate drift
     private Vector3 _center;
     private Vector3 _radiusVector;
     private float _angleDeg;
+
+    // ENCAPSULATION
+    protected float Speed
+    {
+        get => speed;
+        set
+        {
+            if (value is <= -MaxSpeed or >= MaxSpeed)
+            {
+                throw new System.ArgumentException(
+                    $"Speed must be between -10 and 10, but was {value}");
+            }
+            speed = value;
+        }
+    }
 
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Start()
@@ -17,7 +36,23 @@ public class Car : MonoBehaviour
         SetInitialDirection();
     }
 
+    // Update is called once per frame
+    void Update()
+    {
+        Move();
+    }
 
+    // Mouse click callback: doubles speed for 5 seconds (resets timer on repeated clicks)
+    private void OnMouseDown()
+    {
+        Interact();
+    }
+
+    // POLYMORPHISM
+    protected abstract void Interact();
+
+
+    // ABSTRACTION
     private void InstantiateMovementParameters()
     {
         // Compute radius from world origin (XZ plane) using the car's initial position
@@ -39,29 +74,25 @@ public class Car : MonoBehaviour
         _angleDeg = 0f;
     }
 
+    // ABSTRACTION
     private void SetInitialDirection()
     {
         // If speed is negative, flip the car by 180° so it visually "goes forward"
-        if (speed < 0f)
+        if (Speed < 0f)
         {
             transform.Rotate(Vector3.up, 180f, Space.Self);
         }
     }
-
-    // Update is called once per frame
-    void Update()
-    {
-        Move();
-    }
-
+    
+    // ABSTRACTION
     private void Move()
     {
         float r = Mathf.Max(0.0001f, Mathf.Abs(radius));
-        float angularSpeedDeg = (Mathf.Abs(speed) / r) * Mathf.Rad2Deg;
+        float angularSpeedDeg = (Mathf.Abs(Speed) / r) * Mathf.Rad2Deg;
 
         // Positive speed => clockwise; Negative speed => counter-clockwise
         float
-            dir = (speed >= 0f)
+            dir = (Speed >= 0f)
                 ? -1f
                 : 1f; // negative angle change = clockwise in Unity (Y-up)
         _angleDeg += dir * angularSpeedDeg * Time.deltaTime;
